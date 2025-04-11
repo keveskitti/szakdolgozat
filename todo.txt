@@ -1,0 +1,10 @@
+Sudoku:
+- random sudoku táblák generálása
+- UI ráncfelvarrás (timer, start gomb)
+- megoldó
+- error handling
+- JUnit tesztek
+- undo/redo gomb, újrakezdés, új játék
+
+Extrák:
+- nehézségi szintek

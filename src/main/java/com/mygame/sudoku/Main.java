@@ -1,14 +1,18 @@
 package com.mygame.sudoku;
 
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.geometry.Insets;
+
+import java.util.Comparator;
+import java.util.List;
 
 public class Main extends Application {
     private SudokuGame game = new SudokuGame();
+    private long startTime;
 
     @Override
     public void start(Stage primaryStage) {  // fix sudoku teszt céljából
@@ -24,8 +28,11 @@ public class Main extends Application {
                 {0, 0, 0, 0, 8, 0, 0, 7, 9}
         };
 
+        startTime = System.currentTimeMillis();
+
         GridPane grid = new GridPane();
         TextField[][] cells = new TextField[9][9];
+
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
                 TextField cell = new TextField();
@@ -52,6 +59,8 @@ public class Main extends Application {
 
         Label resultLabel = new Label();
         Button checkButton = new Button("Ellenőrzés");
+        Button showScoresButton = new Button("Eredmények");
+
         checkButton.setOnAction(e -> {
             int[][] board = new int[9][9];
 
@@ -85,10 +94,68 @@ public class Main extends Application {
             boolean isValid = SudokuValidator.isValidSudoku(board);
 
             // eredmény kiírása
-            resultLabel.setText(isValid ? "Helyes megoldás!" : "Hibás megoldás!");
+            if (isValid) {
+                long endTime = System.currentTimeMillis();
+                int timeTakenSeconds = (int) ((endTime - startTime) / 1000);
+
+                TextInputDialog dialog = new TextInputDialog("Név");
+                dialog.setHeaderText("Gratulálok! Add meg a neved:");
+                dialog.setContentText("Név:");
+                dialog.showAndWait().ifPresent(name -> {
+                    ScoreManager sm = new ScoreManager();
+                    try {
+                        sm.saveScore(name, timeTakenSeconds);
+                        resultLabel.setText("Helyes megoldás! Idő: " + timeTakenSeconds + " másodperc.");
+                    } catch (Exception ex) {
+                        resultLabel.setText("Nem sikerült elmenteni az eredményt.");
+                        ex.printStackTrace();
+                    }
+                });
+            } else {
+                resultLabel.setText("Hibás megoldás!");
+            }
         });
 
-        VBox layout = new VBox(10, grid, checkButton, resultLabel);
+        // eredménytábla megjelenítése új ablakban
+        showScoresButton.setOnAction(e -> {
+            ScoreManager sm = new ScoreManager();
+            try {
+                List<ScoreManager.Score> scores = sm.loadScores();
+                scores.sort(Comparator.comparingInt(s -> s.time));
+
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < Math.min(5, scores.size()); i++) {
+                    ScoreManager.Score score = scores.get(i);
+                    sb.append((i + 1)).append(". ")
+                            .append(score.player).append(" - ")
+                            .append(score.time).append(" másodperc\n");
+                }
+
+                Stage scoreStage = new Stage();
+                scoreStage.setTitle("Eredménytábla");
+
+                TextArea scoreArea = new TextArea();
+                scoreArea.setEditable(false);
+                scoreArea.setStyle("-fx-font-size: 14; -fx-font-family: 'Consolas';");
+
+                String scoreText = sb.toString().isEmpty()
+                        ? "Nincsenek mentett eredmények."
+                        : sb.toString();
+                scoreArea.setText(scoreText);
+
+                VBox scoreLayout = new VBox(10, new Label("Top játékosok:"), scoreArea);
+                scoreLayout.setPadding(new Insets(10));
+
+                Scene scoreScene = new Scene(scoreLayout, 300, 250);
+                scoreStage.setScene(scoreScene);
+                scoreStage.show();
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        VBox layout = new VBox(10, grid, checkButton, showScoresButton, resultLabel);
         layout.setPadding(new Insets(10));
 
         Scene scene = new Scene(layout);
@@ -97,7 +164,6 @@ public class Main extends Application {
         primaryStage.show();
     }
 
-
     private static void printBoard(int[][] board) {
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
@@ -105,5 +171,9 @@ public class Main extends Application {
             }
             System.out.println();
         }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }

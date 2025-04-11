@@ -19,8 +19,9 @@ public class ScoreManager {
     public List<Score> loadScores() throws Exception {
         File file = new File(FILE);
         if (!file.exists()) return new ArrayList<>();
-        return List.of(mapper.readValue(file, Score[].class));
+        return new ArrayList<>(List.of(mapper.readValue(file, Score[].class)));
     }
+
 
     static class Score {
         public String player;
