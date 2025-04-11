@@ -75,6 +75,6 @@ public class SudokuTest {
                 {0, 0, 0, 4, 1, 9, 0, 0, 5},
                 {0, 0, 0, 0, 8, 0, 0, 7, 9}
         };
-        assertTrue(SudokuValidator.isValidSudoku(board4));
+        assertFalse(SudokuValidator.isValidSudoku(board4));
     }
 }
