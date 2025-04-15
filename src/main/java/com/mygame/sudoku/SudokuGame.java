@@ -1,7 +1,21 @@
 package com.mygame.sudoku;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.scene.control.Button;
+import javafx.scene.text.Text;
+import javafx.util.Duration;
+
 public class SudokuGame {
     private int[][] board;
+    private IntegerProperty seconds = new SimpleIntegerProperty(0);  // Time in seconds
+    private IntegerProperty minutes = new SimpleIntegerProperty(0);  // Time in minutes
+    private IntegerProperty hours = new SimpleIntegerProperty(0);    // Time in hours
+    private boolean isGameRunning = false;
+    private Timeline timerTimeline;
+    private ScoreManager scoreManager = new ScoreManager();  // For saving scores
 
     public SudokuGame() {
         board = new int[9][9]; // sudoku tábla létrehozása
@@ -67,5 +81,62 @@ public class SudokuGame {
             }
         }
         return true;
+    }
+
+    // kezdés + stopper indítása
+    public void startGame(Text timerText, Button startButton) {
+        if (!isGameRunning) {
+            isGameRunning = true;
+            startButton.setDisable(true); // Disable start button once game starts
+
+            // időzítő visszaállítása
+            seconds.set(0);
+            minutes.set(0);
+            hours.set(0);
+
+            timerTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> updateTimer()));
+            timerTimeline.setCycleCount(Timeline.INDEFINITE);
+            timerTimeline.play();
+        }
+    }
+
+    private void updateTimer() {
+        seconds.set(seconds.get() + 1);
+        if (seconds.get() == 60) {
+            seconds.set(0);
+            minutes.set(minutes.get() + 1);
+        }
+        if (minutes.get() == 60) {
+            minutes.set(0);
+            hours.set(hours.get() + 1);
+        }
+    }
+
+    // játék befejezése, időzítő stop
+    public void endGame(String playerName) {
+        if (timerTimeline != null) {
+            timerTimeline.stop();
+        }
+
+        // teljes idő mp-ekben
+        int totalTimeInSeconds = hours.get() * 3600 + minutes.get() * 60 + seconds.get();
+
+        // eredmény mentése
+        try {
+            scoreManager.saveScore(playerName, totalTimeInSeconds);
+            System.out.println("Game ended. Score saved for " + playerName + ": " + totalTimeInSeconds + " seconds.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // rangsor
+        try {
+            System.out.println("Leaderboard:");
+            for (ScoreManager.Score score : scoreManager.loadScores()) {
+                System.out.println(score.player + ": " + score.time + " seconds");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

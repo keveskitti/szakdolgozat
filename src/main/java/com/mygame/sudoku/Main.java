@@ -1,6 +1,9 @@
 package com.mygame.sudoku;
 
 import javafx.application.Application;
+import javafx.application.Platform;  // Import Platform
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -11,7 +14,12 @@ import java.util.Comparator;
 import java.util.List;
 
 public class Main extends Application {
+    private SudokuGame game = new SudokuGame();
     private long startTime;
+    private IntegerProperty seconds = new SimpleIntegerProperty(0);
+    private IntegerProperty minutes = new SimpleIntegerProperty(0);
+    private IntegerProperty hours = new SimpleIntegerProperty(0);
+    private Label timerLabel;  // To display the timer
 
     @Override
     public void start(Stage primaryStage) {  // fix sudoku teszt céljából
@@ -19,11 +27,20 @@ public class Main extends Application {
         SudokuGenerator generator = new SudokuGenerator();
         int[][] puzzle = generator.generatePuzzle(40);  // Generate puzzle with difficulty 40
 
-        startTime = System.currentTimeMillis();
-
+        // Create UI components for the game
         GridPane grid = new GridPane();
         TextField[][] cells = new TextField[9][9];
 
+        // Start Game button and Timer label
+        Button startButton = new Button("Start Game");
+        timerLabel = new Label("00:00:00");  // Initialize the timer label
+
+        startButton.setOnAction(e -> {
+            startGame();
+            startButton.setDisable(true);  // Disable the button after starting the game
+        });
+
+        // Initialize the Sudoku grid
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
                 TextField cell = new TextField();
@@ -35,7 +52,7 @@ public class Main extends Application {
                     cell.setText(String.valueOf(value));
                     cell.setDisable(true); // Make it non-editable
                 } else {
-                    // input csak 1-9 lehessen
+                    // Allow only values 1-9
                     cell.textProperty().addListener((obs, oldVal, newVal) -> {
                         if (!newVal.matches("[1-9]?")) {
                             cell.setText(oldVal);
@@ -146,13 +163,54 @@ public class Main extends Application {
             }
         });
 
-        VBox layout = new VBox(10, grid, checkButton, showScoresButton, resultLabel);
+        // Layout with the Start button and Timer
+        VBox layout = new VBox(10, startButton, timerLabel, grid, checkButton, showScoresButton, resultLabel);
         layout.setPadding(new Insets(10));
 
         Scene scene = new Scene(layout);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Sudoku");
         primaryStage.show();
+    }
+
+    // Start the game and timer
+    private void startGame() {
+        startTime = System.currentTimeMillis();
+        Timer timer = new Timer();
+        timer.start();
+    }
+
+    // Timer class to update the elapsed time
+    private class Timer extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                    updateTimer();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private void updateTimer() {
+        seconds.set(seconds.get() + 1);
+        if (seconds.get() == 60) {
+            seconds.set(0);
+            minutes.set(minutes.get() + 1);
+        }
+        if (minutes.get() == 60) {
+            minutes.set(0);
+            hours.set(hours.get() + 1);
+        }
+
+        // Update the timer label with formatted time on the JavaFX application thread
+        Platform.runLater(() -> {
+            String formattedTime = String.format("%02d:%02d:%02d", hours.get(), minutes.get(), seconds.get());
+            timerLabel.setText(formattedTime);
+        });
     }
 
     private static void printBoard(int[][] board) {
