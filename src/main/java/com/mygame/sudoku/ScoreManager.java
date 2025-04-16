@@ -10,9 +10,9 @@ public class ScoreManager {
     private static final String FILE = "scores.json";
     private ObjectMapper mapper = new ObjectMapper();
 
-    public void saveScore(String player, int timeInSeconds) throws Exception {
+    public void saveScore(String player, String formattedTime) throws Exception {
         List<Score> scores = loadScores();
-        scores.add(new Score(player, timeInSeconds));
+        scores.add(new Score(player, formattedTime));
         mapper.writeValue(new File(FILE), scores);
     }
 
@@ -25,10 +25,10 @@ public class ScoreManager {
 
     static class Score {
         public String player;
-        public int time;
+        public String time;
 
         public Score() {}
-        public Score(String player, int time) {
+        public Score(String player, String time) {
             this.player = player;
             this.time = time;
         }

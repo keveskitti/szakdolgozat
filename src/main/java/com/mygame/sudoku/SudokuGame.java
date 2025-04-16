@@ -1,5 +1,4 @@
 // UI, játék logikája, időzítő, eredmények
-
 package com.mygame.sudoku;
 
 import javafx.animation.KeyFrame;
@@ -7,6 +6,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -17,6 +17,16 @@ import java.util.Comparator;
 import java.util.List;
 
 public class SudokuGame {
+
+    // segédfüggvény: idő átalakítása másodperccé a sorrendezéshez
+    private int timeToSeconds(String time) {
+        String[] parts = time.split(":");
+        int h = Integer.parseInt(parts[0]);
+        int m = Integer.parseInt(parts[1]);
+        int s = Integer.parseInt(parts[2]);
+        return h * 3600 + m * 60 + s;
+    }
+
     private int[][] board;
     private IntegerProperty seconds = new SimpleIntegerProperty(0);
     private IntegerProperty minutes = new SimpleIntegerProperty(0);
@@ -24,20 +34,39 @@ public class SudokuGame {
     private boolean isGameRunning = false;
     private Timeline timerTimeline;
     private ScoreManager scoreManager = new ScoreManager();
+    private Label timerLabel;
 
     public SudokuGame() {
         board = new int[9][9]; // sudoku tábla létrehozása
     }
 
     public Scene createGameScene(Stage primaryStage) {
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+        layout.setAlignment(Pos.CENTER);
+        layout.setPrefHeight(700);
+
+        Button startButton = new Button("Indítás");
+        layout.getChildren().add(startButton);
+
+        startButton.setOnAction(e -> {
+            layout.getChildren().clear();
+            layout.setAlignment(Pos.TOP_LEFT); // visszaigazítás játék UI-ra
+            layout.getChildren().addAll(buildGameUI(startButton));
+            startGame(timerLabel, startButton);
+        });
+
+        return new Scene(layout, 500, 600);
+    }
+
+    private List<javafx.scene.Node> buildGameUI(Button startButton) {
         SudokuGenerator generator = new SudokuGenerator();
         int[][] puzzle = generator.generatePuzzle(40); // 40 mező lesz eltávolítva
 
         GridPane grid = new GridPane();
         TextField[][] cells = new TextField[9][9];
 
-        Button startButton = new Button("Indítás");
-        Label timerLabel = new Label("00:00:00");
+        timerLabel = new Label("00:00:00");
         timerLabel.setStyle("-fx-font-size: 16;");
 
         Label resultLabel = new Label();
@@ -61,9 +90,6 @@ public class SudokuGame {
                 grid.add(cell, col, row);
             }
         }
-
-        // indítás gomb esemény
-        startButton.setOnAction(e -> startGame(timerLabel, startButton));
 
         // ellenőrzés gomb esemény
         checkButton.setOnAction(e -> {
@@ -110,23 +136,20 @@ public class SudokuGame {
         // eredménytábla megjelenítése
         showScoresButton.setOnAction(e -> showScorePopup());
 
-        VBox layout = new VBox(10, startButton, timerLabel, grid, checkButton, showScoresButton, resultLabel);
-        layout.setPadding(new Insets(10));
-
-        return new Scene(layout);
+        return List.of(timerLabel, grid, checkButton, showScoresButton, resultLabel);
     }
 
     private void showScorePopup() {
         try {
             List<ScoreManager.Score> scores = scoreManager.loadScores();
-            scores.sort(Comparator.comparingInt(s -> s.time));
+            scores.sort(Comparator.comparingInt(s -> timeToSeconds(s.time)));
 
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < Math.min(5, scores.size()); i++) {
                 ScoreManager.Score score = scores.get(i);
                 sb.append((i + 1)).append(". ")
                         .append(score.player).append(" - ")
-                        .append(score.time).append(" másodperc\n");
+                        .append(score.time).append(" idő ");
             }
 
             Stage scoreStage = new Stage();
@@ -181,15 +204,16 @@ public class SudokuGame {
 
     // játék befejezése, időzítő stop
     public void endGame(String playerName) {
+        // idő formátumban fogjuk elmenteni, nem másodpercben
         if (timerTimeline != null) {
             timerTimeline.stop();
         }
 
-        int totalTimeInSeconds = hours.get() * 3600 + minutes.get() * 60 + seconds.get();
-
         try {
-            scoreManager.saveScore(playerName, totalTimeInSeconds);
-            System.out.println("Game ended. Score saved for " + playerName + ": " + totalTimeInSeconds + " seconds.");
+            // idő formátumban mentés
+            String formattedTime = String.format("%02d:%02d:%02d", hours.get(), minutes.get(), seconds.get());
+            scoreManager.saveScore(playerName, formattedTime);
+            System.out.println("Game ended. Score saved for " + playerName + ": " + formattedTime);
         } catch (Exception e) {
             e.printStackTrace();
         }
