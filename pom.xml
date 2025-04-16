@@ -17,7 +17,7 @@
     </properties>
 
     <dependencies>
-        <!-- JavaFX dependencies -->
+        <!-- JavaFX -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -29,14 +29,14 @@
             <version>${javafx.version}</version>
         </dependency>
 
-        <!-- Jackson for JSON handling -->
+        <!-- Jackson -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.15.0</version>
         </dependency>
 
-        <!-- JUnit 5 for testing -->
+        <!-- JUnit -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -53,7 +53,7 @@
 
     <build>
         <plugins>
-            <!-- Maven compiler plugin -->
+            <!-- Maven plugin-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
