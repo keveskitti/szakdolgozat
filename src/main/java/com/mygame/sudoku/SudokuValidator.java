@@ -1,3 +1,5 @@
+// kitöltött sudoku táblák ellenőrzése a játék szabályainak megfelelően
+
 package com.mygame.sudoku;
 
 public class SudokuValidator {

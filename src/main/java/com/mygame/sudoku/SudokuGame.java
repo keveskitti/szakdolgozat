@@ -1,106 +1,170 @@
+// UI, játék logikája, időzítő, eredmények
+
 package com.mygame.sudoku;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.scene.control.Button;
-import javafx.scene.text.Text;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
 import javafx.util.Duration;
+
+import java.util.Comparator;
+import java.util.List;
 
 public class SudokuGame {
     private int[][] board;
-    private IntegerProperty seconds = new SimpleIntegerProperty(0);  // Time in seconds
-    private IntegerProperty minutes = new SimpleIntegerProperty(0);  // Time in minutes
-    private IntegerProperty hours = new SimpleIntegerProperty(0);    // Time in hours
+    private IntegerProperty seconds = new SimpleIntegerProperty(0);
+    private IntegerProperty minutes = new SimpleIntegerProperty(0);
+    private IntegerProperty hours = new SimpleIntegerProperty(0);
     private boolean isGameRunning = false;
     private Timeline timerTimeline;
-    private ScoreManager scoreManager = new ScoreManager();  // For saving scores
+    private ScoreManager scoreManager = new ScoreManager();
 
     public SudokuGame() {
         board = new int[9][9]; // sudoku tábla létrehozása
     }
 
-    public void setCell(int row, int col, int value) {
-        board[row][col] = value; // beállítja a megadott cella értékét
-    }
+    public Scene createGameScene(Stage primaryStage) {
+        SudokuGenerator generator = new SudokuGenerator();
+        int[][] puzzle = generator.generatePuzzle(40); // 40 mező lesz eltávolítva
 
-    public int getCell(int row, int col) {
-        return board[row][col]; // visszaadja a megadott cella értékét
-    }
+        GridPane grid = new GridPane();
+        TextField[][] cells = new TextField[9][9];
 
-    public boolean isValid() {
-        // táblázat érvényes-e
-        return checkRows() && checkCols() && checkBoxes();
-    }
+        Button startButton = new Button("Indítás");
+        Label timerLabel = new Label("00:00:00");
+        timerLabel.setStyle("-fx-font-size: 16;");
 
-    private boolean checkRows() {
-        // sorok ell.
+        Label resultLabel = new Label();
+
+        Button checkButton = new Button("Ellenőrzés");
+        Button showScoresButton = new Button("Eredmények");
+
+        // sudoku tábla létrehozása
         for (int row = 0; row < 9; row++) {
-            boolean[] seen = new boolean[10];
             for (int col = 0; col < 9; col++) {
-                int num = board[row][col]; // megnézem mi a sor akt. cellájában a szám
-                if (num != 0 && seen[num]) return false; // ha már van ilyen akkor hibás
-                seen[num] = true;
+                TextField cell = new TextField();
+                cell.setPrefSize(50, 50);
+                cell.setStyle("-fx-font-size: 16; -fx-alignment: center;");
+                int value = puzzle[row][col];
+                if (value != 0) {
+                    cell.setText(String.valueOf(value));
+                    cell.setDisable(true); // ne legyen aktív mező
+                    board[row][col] = value;
+                }
+                cells[row][col] = cell;
+                grid.add(cell, col, row);
             }
         }
-        return true;
-    }
 
-    private boolean checkCols() {
-        // oszlopok ell.
-        for (int col = 0; col < 9; col++) {
-            boolean[] seen = new boolean[10];
-            for (int row = 0; row < 9; row++) {
-                int num = board[row][col]; // innen ugyanaz mint a sornál csak oszlopra
-                if (num != 0 && seen[num]) return false;
-                seen[num] = true;
-            }
-        }
-        return true;
-    }
+        // indítás gomb esemény
+        startButton.setOnAction(e -> startGame(timerLabel, startButton));
 
-    private boolean checkBoxes() {
-        // 3x3 blokkok ell.
-        for (int blockRow = 0; blockRow < 3; blockRow++) {
-            for (int blockCol = 0; blockCol < 3; blockCol++) {
-                boolean[] seen = new boolean[10];
-                // minden cellát megnézek a blokkban
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        int row = blockRow * 3 + i;  // blokk sora
-                        int col = blockCol * 3 + j;  // blokk oszlopa
-                        int num = board[row][col];   // aktuális cella száma
+        // ellenőrzés gomb esemény
+        checkButton.setOnAction(e -> {
+            int[][] currentBoard = new int[9][9];
+            boolean allFilled = true;
 
-                        if (num != 0) {
-                            if (seen[num]) return false; // ha már van ilyen akkor hibás
-                            seen[num] = true;
+            for (int r = 0; r < 9; r++) {
+                for (int c = 0; c < 9; c++) {
+                    String text = cells[r][c].getText();
+                    if (!cells[r][c].isDisabled()) {
+                        if (text.isEmpty()) {
+                            allFilled = false;
                         }
+                        currentBoard[r][c] = text.isEmpty() ? 0 : Integer.parseInt(text);
+                    } else {
+                        currentBoard[r][c] = Integer.parseInt(cells[r][c].getText());
                     }
                 }
             }
+
+            if (!allFilled) {
+                resultLabel.setText("Kérlek töltsd ki az összes mezőt!");
+                return;
+            }
+
+            System.out.println("Ellenőrzött sudoku tábla:");
+            printBoard(currentBoard);
+
+            boolean isValid = SudokuValidator.isValidSudoku(currentBoard);
+
+            if (isValid) {
+                TextInputDialog dialog = new TextInputDialog("Név");
+                dialog.setHeaderText("Gratulálok! Add meg a neved:");
+                dialog.setContentText("Név:");
+                dialog.showAndWait().ifPresent(name -> {
+                    endGame(name);
+                    resultLabel.setText("Helyes megoldás!");
+                });
+            } else {
+                resultLabel.setText("Hibás megoldás!");
+            }
+        });
+
+        // eredménytábla megjelenítése
+        showScoresButton.setOnAction(e -> showScorePopup());
+
+        VBox layout = new VBox(10, startButton, timerLabel, grid, checkButton, showScoresButton, resultLabel);
+        layout.setPadding(new Insets(10));
+
+        return new Scene(layout);
+    }
+
+    private void showScorePopup() {
+        try {
+            List<ScoreManager.Score> scores = scoreManager.loadScores();
+            scores.sort(Comparator.comparingInt(s -> s.time));
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < Math.min(5, scores.size()); i++) {
+                ScoreManager.Score score = scores.get(i);
+                sb.append((i + 1)).append(". ")
+                        .append(score.player).append(" - ")
+                        .append(score.time).append(" másodperc\n");
+            }
+
+            Stage scoreStage = new Stage();
+            scoreStage.setTitle("Eredménytábla");
+
+            TextArea scoreArea = new TextArea();
+            scoreArea.setEditable(false);
+            scoreArea.setStyle("-fx-font-size: 14; -fx-font-family: 'Consolas';");
+            scoreArea.setText(sb.toString().isEmpty() ? "Nincsenek mentett eredmények." : sb.toString());
+
+            VBox scoreLayout = new VBox(10, new Label("Top játékosok:"), scoreArea);
+            scoreLayout.setPadding(new Insets(10));
+
+            Scene scoreScene = new Scene(scoreLayout, 300, 250);
+            scoreStage.setScene(scoreScene);
+            scoreStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return true;
     }
 
     // kezdés + stopper indítása
-    public void startGame(Text timerText, Button startButton) {
+    public void startGame(Label timerLabel, Button startButton) {
         if (!isGameRunning) {
             isGameRunning = true;
-            startButton.setDisable(true); // Disable start button once game starts
+            startButton.setDisable(true); // indítás után ne lehessen kattintani
 
-            // időzítő visszaállítása
             seconds.set(0);
             minutes.set(0);
             hours.set(0);
 
-            timerTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> updateTimer()));
+            timerTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> updateTimer(timerLabel)));
             timerTimeline.setCycleCount(Timeline.INDEFINITE);
             timerTimeline.play();
         }
     }
 
-    private void updateTimer() {
+    private void updateTimer(Label timerLabel) {
         seconds.set(seconds.get() + 1);
         if (seconds.get() == 60) {
             seconds.set(0);
@@ -110,6 +174,9 @@ public class SudokuGame {
             minutes.set(0);
             hours.set(hours.get() + 1);
         }
+
+        String formattedTime = String.format("%02d:%02d:%02d", hours.get(), minutes.get(), seconds.get());
+        timerLabel.setText(formattedTime);
     }
 
     // játék befejezése, időzítő stop
@@ -118,25 +185,22 @@ public class SudokuGame {
             timerTimeline.stop();
         }
 
-        // teljes idő mp-ekben
         int totalTimeInSeconds = hours.get() * 3600 + minutes.get() * 60 + seconds.get();
 
-        // eredmény mentése
         try {
             scoreManager.saveScore(playerName, totalTimeInSeconds);
             System.out.println("Game ended. Score saved for " + playerName + ": " + totalTimeInSeconds + " seconds.");
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
-        // rangsor
-        try {
-            System.out.println("Leaderboard:");
-            for (ScoreManager.Score score : scoreManager.loadScores()) {
-                System.out.println(score.player + ": " + score.time + " seconds");
+    private static void printBoard(int[][] board) {
+        for (int row = 0; row < 9; row++) {
+            for (int col = 0; col < 9; col++) {
+                System.out.print(board[row][col] + " ");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println();
         }
     }
 }

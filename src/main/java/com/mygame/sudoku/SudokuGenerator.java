@@ -1,3 +1,5 @@
+// kitöltött sudoku táblák generálása, véletlenszerűen törölt cellákkal
+
 package com.mygame.sudoku;
 
 import java.util.Random;

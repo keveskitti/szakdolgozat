@@ -1,12 +1,13 @@
 Sudoku:
 - UI ráncfelvarrás
 - undo/redo gomb, újrakezdés, új játék
+- JUnit tesztek
 
 Extrák:
-- nehézségi szintek (félig kész??)
+- nehézségi szintek
 - solver
 
 Kész:
 - random sudoku táblák generálása
-- JUnit tesztek
 - timer, start gomb
+- rangsor, eredmények mentése
